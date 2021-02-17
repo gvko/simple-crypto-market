@@ -1,0 +1,8 @@
+{
+  "verbose": true,
+  "watch": [
+    "src"
+  ],
+  "ext": "ts,json",
+  "exec": "npm run make && node ./dist/src/bot.js"
+}
