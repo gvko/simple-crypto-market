@@ -1,4 +1,4 @@
-import { createServer } from 'http';
+// import { createServer } from 'http';
 import axios from 'axios';
 
 let ethBalance = 10;
@@ -91,21 +91,26 @@ async function getBalances(): Promise<any> {
   return mutex;
 }
 
-const server = createServer(async (req, res) => {
-  if (req.url !== '/') {
-    res.writeHead(404);
-    res.end();
-    return;
-  }
+
+console.log('Starting bot...');
+setInterval(async () => {
   const orderbook = await requestOrderBook();
   const { askPrice, bidPrice } = findBestPrices(orderbook);
   await placeRandomOrders(askPrice, bidPrice);
+  console.log('---');
+}, 5000);
 
+setInterval(async () => {
   await getBalances();
+  console.log('---');
+}, 30000);
 
-  res.writeHead(200);
-  res.end();
-});
-server.listen(3000, '0.0.0.0', () => {
-  console.log('Service listening on localhost:3000');
-});
+export {
+  requestOrderBook,
+  findBestPrices,
+  placeRandomOrders,
+  placeAskOrder,
+  placeBidOrder,
+  fillAskOrder,
+  fillBidOrder
+}
