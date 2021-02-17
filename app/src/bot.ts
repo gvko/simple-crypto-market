@@ -137,7 +137,7 @@ async function getBalances(): Promise<any> {
 }
 
 
-console.log('Starting bot...');
+console.log('Starting bot (5 sec initial interval)...');
 setInterval(async () => {
   const orderbook = await requestOrderBook();
   const { askPrice, bidPrice } = findBestPrices(orderbook);
