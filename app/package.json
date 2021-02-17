@@ -7,7 +7,7 @@
     "clean": "rm -rf ./dist",
     "make": "npm run clean && tsc --pretty --project ./tsconfig.json",
     "build": "DOCKER_BUILDKIT=1 docker build --target=local-dev -t simple-crypto-market:local-dev -f ../Dockerfile ../",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_ENV=test ts-mocha --paths -p tsconfig.json --config .mocharc.js test/",
     "start-dev": "nodemon",
     "start": "docker-compose up backend"
   },
@@ -22,8 +22,13 @@
   },
   "homepage": "https://github.com/gvko/simple-crypto-market#readme",
   "devDependencies": {
+    "@types/mocha": "^8.2.1",
     "@types/node": "^14.14.28",
+    "chai": "^4.3.0",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^8.3.0",
     "nodemon": "^2.0.7",
+    "ts-mocha": "^8.0.0",
     "typescript": "^4.1.5"
   },
   "dependencies": {

@@ -106,6 +106,8 @@ setInterval(async () => {
 }, 30000);
 
 export {
+  ethBalance,
+  usdBalance,
   requestOrderBook,
   findBestPrices,
   placeRandomOrders,
