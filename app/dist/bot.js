@@ -4,6 +4,7 @@ const http_1 = require("http");
 const axios_1 = require("axios");
 let ethBalance = 10;
 let usdBalance = 2000;
+let mutex = Promise.resolve(); // global mutex instance
 async function requestOrderBook() {
     const res = await axios_1.default.get('https://api.deversifi.com/bfx/v2/book/tETHUSD/R0');
     return res.data;
@@ -17,7 +18,7 @@ function findBestPrices(orderbook) {
     bidPrice = order[1];
     return { askPrice, bidPrice };
 }
-function placeRandomOrders(askPrice, bidPrice) {
+async function placeRandomOrders(askPrice, bidPrice) {
     const maxAsk = askPrice + (askPrice * 0.05);
     const minAsk = askPrice - (askPrice * 0.05);
     const maxBid = bidPrice + (bidPrice * 0.05);
@@ -26,42 +27,55 @@ function placeRandomOrders(askPrice, bidPrice) {
         return Math.floor(Math.random() * (max - min + 1) + min);
     };
     const randAmount = () => {
-        return rand(0, 10) + Number(Math.random().toFixed(8));
+        return Number((rand(0, 10) + Math.random()).toFixed(8));
     };
+    const orders = [];
     for (let i = 0; i < 5; i++) {
         const randomAsk = rand(minAsk, maxAsk);
         const randomBid = rand(minBid, maxBid);
         const randomAskAmount = randAmount();
         const randomBidAmount = randAmount();
-        placeAskOrder(randomAsk, randomAskAmount, askPrice);
-        placeBidOrder(randomBid, randomBidAmount, bidPrice);
+        orders.push(placeAskOrder(randomAsk, randomAskAmount, askPrice), placeBidOrder(randomBid, randomBidAmount, bidPrice));
     }
+    await Promise.all(orders);
 }
-function placeAskOrder(price, amount, bestAskPrice) {
+async function placeAskOrder(price, amount, bestAskPrice) {
     console.log(`PLACE ASK @ ${price} (${amount})`);
     if (price < bestAskPrice) {
-        fillAskOrder(price, amount);
+        await fillAskOrder(price, amount);
     }
 }
-function placeBidOrder(price, amount, bestBidPrice) {
+async function placeBidOrder(price, amount, bestBidPrice) {
     console.log(`PLACE BID @ ${price} (${amount})`);
     if (price > bestBidPrice) {
-        fillBidOrder(price, -amount);
+        await fillBidOrder(price, -amount);
     }
 }
-function fillAskOrder(price, amount) {
-    if (usdBalance > price) {
-        usdBalance -= price;
-        ethBalance += amount;
-    }
-    console.log(`FILLED ASK @ ${price} (${amount})`);
+async function fillAskOrder(price, amount) {
+    mutex = mutex.then(() => {
+        if (usdBalance > price) {
+            usdBalance -= price;
+            ethBalance += amount;
+            console.log(`FILLED ASK @ ${price} (${amount})`);
+        }
+    });
+    return mutex;
 }
-function fillBidOrder(price, amount) {
-    if (ethBalance > amount) {
-        usdBalance += price;
-        ethBalance -= amount;
-    }
-    console.log(`FILLED BID @ ${price} (-${amount})`);
+async function fillBidOrder(price, amount) {
+    mutex = mutex.then(() => {
+        if (ethBalance > amount) {
+            usdBalance += price;
+            ethBalance -= amount;
+            console.log(`FILLED BID @ ${price} (${amount})`);
+        }
+    });
+    return mutex;
+}
+async function getBalances() {
+    mutex = mutex.then(() => {
+        console.log('Overall market assets balance:', { ETH: ethBalance, USD: usdBalance });
+    });
+    return mutex;
 }
 const server = http_1.createServer(async (req, res) => {
     if (req.url !== '/') {
@@ -71,7 +85,8 @@ const server = http_1.createServer(async (req, res) => {
     }
     const orderbook = await requestOrderBook();
     const { askPrice, bidPrice } = findBestPrices(orderbook);
-    placeRandomOrders(askPrice, bidPrice);
+    await placeRandomOrders(askPrice, bidPrice);
+    await getBalances();
     res.writeHead(200);
     res.end();
 });
